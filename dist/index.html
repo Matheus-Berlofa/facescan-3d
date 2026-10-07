@@ -3,44 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Scanner facial privado que cria um modelo 3D aproximado e um pacote de referências para edição." />
+    <meta name="description" content="Captura facial ao vivo para reconstrução 3D privada em uma GPU pessoal." />
     <meta name="theme-color" content="#07120f" />
-    <title>FaceScan 3D</title>
+    <title>FaceScan 3D — Live</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2307110e'/%3E%3Cpath d='M20 24c1-10 23-12 25 0v17c-4 9-21 9-25 0z' fill='none' stroke='%2379f2c0' stroke-width='4'/%3E%3Ccircle cx='27' cy='31' r='2.5' fill='%2379f2c0'/%3E%3Ccircle cx='38' cy='31' r='2.5' fill='%2379f2c0'/%3E%3Cpath d='M28 40q5 4 10 0' fill='none' stroke='%2379f2c0' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="preconnect" href="https://storage.googleapis.com" />
     <link rel="stylesheet" href="./styles.css" />
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-        }
-      }
-    </script>
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div class="brand"><span class="brand-mark" aria-hidden="true"></span> FaceScan <b>3D</b></div>
-        <div class="privacy-pill"><span aria-hidden="true">●</span> Processamento local</div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span> FaceScan <b>3D Live</b></div>
+        <div class="privacy-pill"><span aria-hidden="true">●</span> Quadros efêmeros</div>
       </header>
 
       <section class="workspace" aria-labelledby="page-title">
         <div class="intro">
-          <p class="eyebrow">MODELO BASE PARA PES 2021</p>
-          <h1 id="page-title">Transforme seu rosto em uma malha 3D.</h1>
-          <p>Faça cinco capturas guiadas. O resultado fica no seu dispositivo e pode ser baixado em GLB e OBJ.</p>
+          <p class="eyebrow">RECONSTRUÇÃO NEURAL PARA PES 2021</p>
+          <h1 id="page-title">Gire o rosto. A GPU reconstrói.</h1>
+          <p>O navegador orienta o movimento e transmite apenas os quadros úteis para o seu computador privado. As imagens ficam na memória e são descartadas após criar o modelo.</p>
         </div>
 
+        <section class="server-card" aria-labelledby="server-title">
+          <div class="server-copy">
+            <span class="server-dot" id="serverDot" aria-hidden="true"></span>
+            <div>
+              <strong id="server-title">Conectar ao processador privado</strong>
+              <small id="serverStatus">Informe o endereço seguro do PC com a GTX 1060.</small>
+            </div>
+          </div>
+          <form class="server-form" id="serverForm">
+            <label>
+              <span>Servidor WSS</span>
+              <input id="serverUrl" name="serverUrl" type="url" inputmode="url" autocomplete="url" placeholder="wss://seu-endereco.trycloudflare.com/ws/scan" required />
+            </label>
+            <label>
+              <span>Chave de acesso</span>
+              <input id="accessKey" name="accessKey" type="password" autocomplete="off" placeholder="Chave criada no PC remoto" required />
+            </label>
+            <button class="secondary-button" id="connectButton" type="submit">Testar conexão</button>
+          </form>
+        </section>
+
         <div class="scanner-grid">
-          <section class="camera-card" aria-label="Área de captura">
+          <section class="camera-card" aria-label="Área de captura ao vivo">
             <div class="camera-stage" id="cameraStage">
               <video id="video" autoplay playsinline muted></video>
               <canvas id="overlay" aria-hidden="true"></canvas>
               <div class="idle-visual" id="idleVisual">
                 <div class="face-orbit" aria-hidden="true"><span></span></div>
-                <p>Enquadre o rosto em um local bem iluminado</p>
+                <p>Use luz uniforme e retire óculos, boné e fones</p>
               </div>
               <div class="camera-badge" id="cameraBadge">Câmera desligada</div>
               <div class="direction-hint" id="directionHint" hidden>
@@ -48,57 +61,75 @@
                 <strong id="directionTitle">Olhe para a câmera</strong>
                 <small id="directionText">Mantenha a expressão neutra</small>
               </div>
-              <div class="countdown" id="countdown" hidden>3</div>
+              <div class="scan-sweep" id="scanSweep" hidden aria-hidden="true"></div>
             </div>
             <div class="camera-actions">
-              <button class="primary-button" id="startButton" type="button">Iniciar escaneamento</button>
-              <button class="secondary-button" id="captureButton" type="button" disabled>Capturar posição</button>
+              <button class="primary-button" id="startButton" type="button">Abrir câmera</button>
+              <button class="primary-button" id="scanButton" type="button" disabled>Iniciar scan ao vivo</button>
               <button class="ghost-button" id="resetButton" type="button" disabled>Recomeçar</button>
             </div>
             <p class="camera-note" id="cameraNote">A câmera só será ativada depois da sua permissão.</p>
           </section>
 
-          <aside class="progress-card" aria-label="Progresso do escaneamento">
+          <aside class="progress-card" aria-label="Cobertura do escaneamento">
             <div class="progress-head">
-              <div><span>PROGRESSO</span><strong id="progressLabel">0 de 5</strong></div>
+              <div><span>COBERTURA FACIAL</span><strong id="progressLabel">0 de 9 ângulos</strong></div>
               <div class="ring" id="progressRing" style="--progress: 0"><b id="progressPercent">0%</b></div>
             </div>
-            <ol class="steps" id="steps">
-              <li class="active"><span>01</span><div><strong>Frente</strong><small>Expressão neutra</small></div><i></i></li>
-              <li><span>02</span><div><strong>Leve à esquerda</strong><small>Aproximadamente 25°</small></div><i></i></li>
-              <li><span>03</span><div><strong>Perfil esquerdo</strong><small>Aproximadamente 45°</small></div><i></i></li>
-              <li><span>04</span><div><strong>Leve à direita</strong><small>Aproximadamente 25°</small></div><i></i></li>
-              <li><span>05</span><div><strong>Perfil direito</strong><small>Aproximadamente 45°</small></div><i></i></li>
-            </ol>
+            <div class="angle-map" id="angleMap" aria-label="Ângulos necessários">
+              <span data-angle="-45">−45°</span>
+              <span data-angle="-34">−34°</span>
+              <span data-angle="-23">−23°</span>
+              <span data-angle="-12">−12°</span>
+              <span data-angle="0" class="current">0°</span>
+              <span data-angle="12">+12°</span>
+              <span data-angle="23">+23°</span>
+              <span data-angle="34">+34°</span>
+              <span data-angle="45">+45°</span>
+            </div>
+            <div class="live-stats">
+              <div><span>ÂNGULO ATUAL</span><strong id="yawValue">—</strong></div>
+              <div><span>QUADROS ACEITOS</span><strong id="frameCount">0</strong></div>
+              <div><span>PROCESSADOR</span><strong id="engineStatus">Desconectado</strong></div>
+            </div>
             <div class="quality-panel">
-              <span>QUALIDADE DA CAPTURA</span>
+              <span>QUALIDADE AO VIVO</span>
               <div><i id="lightDot"></i><b id="lightStatus">Aguardando câmera</b></div>
               <div><i id="faceDot"></i><b id="faceStatus">Rosto não detectado</b></div>
+              <div><i id="poseDot"></i><b id="poseStatus">Olhe para frente</b></div>
             </div>
           </aside>
         </div>
 
-        <section class="result-card" id="resultCard" hidden aria-live="polite">
+        <section class="processing-card" id="processingCard" hidden aria-live="polite">
+          <div class="processing-spinner" aria-hidden="true"></div>
           <div>
-            <p class="eyebrow">CAPTURA CONCLUÍDA</p>
-            <h2>Seu pacote 3D está pronto.</h2>
-            <p>Inclui a malha em GLB e OBJ, textura frontal, cinco referências e dados dos pontos faciais.</p>
-          </div>
-          <div class="result-actions">
-            <button class="primary-button" id="downloadButton" type="button">Baixar pacote .zip</button>
-            <button class="secondary-button" id="downloadGlbButton" type="button">Baixar somente GLB</button>
+            <p class="eyebrow">GPU TRABALHANDO</p>
+            <h2 id="processingTitle">Reconstruindo seu rosto…</h2>
+            <p id="processingText">Os quadros estão apenas na memória do computador privado.</p>
           </div>
         </section>
 
-        <section class="tips" aria-label="Dicas para uma boa captura">
-          <div><b>01</b><p><strong>Luz uniforme</strong><span>Evite sombras fortes no rosto.</span></p></div>
-          <div><b>02</b><p><strong>Sem acessórios</strong><span>Retire óculos, boné e fones.</span></p></div>
-          <div><b>03</b><p><strong>Expressão neutra</strong><span>Boca fechada e olhos abertos.</span></p></div>
+        <section class="result-card" id="resultCard" hidden aria-live="polite">
+          <div>
+            <p class="eyebrow">RECONSTRUÇÃO CONCLUÍDA</p>
+            <h2>Seu modelo neural está pronto.</h2>
+            <p>O pacote contém OBJ, GLB, textura e os parâmetros necessários para a adaptação ao PES 2021.</p>
+          </div>
+          <div class="result-actions">
+            <a class="button-link primary-button" id="downloadButton" href="#">Baixar modelo .zip</a>
+          </div>
+        </section>
+
+        <section class="tips" aria-label="Como funciona">
+          <div><b>01</b><p><strong>Transmissão segura</strong><span>Use somente um endereço WSS protegido.</span></p></div>
+          <div><b>02</b><p><strong>Sem galeria de fotos</strong><span>Os quadros são mantidos apenas em memória.</span></p></div>
+          <div><b>03</b><p><strong>Exportação aberta</strong><span>Baixe OBJ e GLB para continuar no PES.</span></p></div>
         </section>
       </section>
     </main>
 
-    <canvas id="captureCanvas" width="1024" height="1024" hidden></canvas>
+    <canvas id="captureCanvas" width="512" height="512" hidden></canvas>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

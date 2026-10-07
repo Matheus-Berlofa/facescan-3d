@@ -1,0 +1,7 @@
+server/.venv/
+server/.env
+server/engines/
+server/jobs/
+server/__pycache__/
+server/**/*.pyc
+
